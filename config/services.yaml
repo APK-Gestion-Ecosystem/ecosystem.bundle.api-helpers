@@ -2,11 +2,12 @@ parameters:
     env(BUILD): 'local'
 
 services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
     Ecosystem\ApiHelpersBundle\Controller\HealthCheckController:
         arguments: ['%env(string:BUILD)%']
-        tags:
-            - { name: container.service_subscriber }
-            - { name: controller.service_arguments }
 
     Ecosystem\ApiHelpersBundle\EventListener\ExceptionListener:
         arguments: ['@logger', '%kernel.debug%']
