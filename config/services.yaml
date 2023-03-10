@@ -13,3 +13,6 @@ services:
         arguments: ['@logger', '%kernel.debug%']
         tags:
             - { name: kernel.event_listener, event: kernel.exception }
+
+    Ecosystem\ApiHelpersBundle\Monolog\Processor:
+        arguments: ['%env(string:BUILD)%']
