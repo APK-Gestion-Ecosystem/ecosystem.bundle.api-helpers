@@ -1,6 +1,10 @@
 parameters:
     # nothing to declare
 services:
+    _defaults:
+        bind:
+            $build: '%env(string:BUILD)%'
+
     Ecosystem\ApiHelpersBundle\Controller\HealthCheckController:
         arguments: ['%build%']
         tags:
