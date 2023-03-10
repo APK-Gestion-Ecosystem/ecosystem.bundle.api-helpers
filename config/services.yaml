@@ -1,0 +1,7 @@
+parameters:
+    # nothing to declare
+services:
+    App\EventListener\ExceptionListener:
+        arguments: ['@logger', '%kernel.debug%']
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception }

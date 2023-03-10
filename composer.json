@@ -1,0 +1,9 @@
+{
+    "name": "ecosystem/api-helpers",
+    "type": "symfony-bundle",
+    "autoload": {
+        "psr-4": {
+            "Ecosystem\\ApiHelpersBundle\\": "src/"
+        }
+    }
+}
