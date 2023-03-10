@@ -1,6 +1,11 @@
 parameters:
     # nothing to declare
 services:
+    Ecosystem\ApiHelpersBundle\Controller\HealthCheckController:
+        arguments: ['%build%']
+#        tags:
+#            - { name: kernel.event_listener, event: kernel.exception }
+
     Ecosystem\ApiHelpersBundle\EventListener\ExceptionListener:
         arguments: ['@logger', '%kernel.debug%']
         tags:
