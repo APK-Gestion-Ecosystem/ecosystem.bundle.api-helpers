@@ -3,7 +3,7 @@ parameters:
 
 services:
     Ecosystem\ApiHelpersBundle\Controller\HealthCheckController:
-        arguments: ['%build%']
+        arguments: ['%env(string:BUILD)%']
         tags:
             - { name: controller.service_arguments }
 
