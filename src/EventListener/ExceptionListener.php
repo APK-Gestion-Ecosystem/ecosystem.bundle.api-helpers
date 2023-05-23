@@ -2,6 +2,7 @@
 
 namespace Ecosystem\ApiHelpersBundle\EventListener;
 
+use Ecosystem\ApiHelpersBundle\Exception\InvalidDataException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -18,21 +19,32 @@ final class ExceptionListener
     public function onKernelException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
-        $statusCode = JsonResponse::HTTP_INTERNAL_SERVER_ERROR;
-        $statusMessage = $this->debug ? $exception->getMessage() : self::INTERNAL_SERVER_ERROR;
+        $this->logger->error(sprintf('Handling exception: %s', $exception->getMessage()));
 
-        if ($exception instanceof HttpExceptionInterface) {
-            $statusCode = $exception->getStatusCode();
-            $statusMessage = $exception->getMessage();
-        } else {
-            $this->logger->error(sprintf('Unhandled exception: %s', $exception->getMessage()));
+        $response = $this->getResponseFromException($exception);
+        $event->setResponse($response);
+    }
+
+    private function getResponseFromException(\Throwable $exception): JsonResponse
+    {
+        if ($exception instanceof InvalidDataException) {
+            return new JsonResponse([
+                'code' => $exception->getCode(),
+                'message' => $exception->getMessage(),
+                'errors' => $exception->getErrors()
+            ], $exception->getCode());
         }
 
-        $response = new JsonResponse([
-            'code' => $statusCode,
-            'message' => $statusMessage,
-        ], $statusCode);
+        if ($exception instanceof HttpExceptionInterface) {
+            return new JsonResponse([
+                'code' => $exception->getStatusCode(),
+                'message' => $exception->getMessage(),
+            ], $exception->getStatusCode());
+        }
 
-        $event->setResponse($response);
+        return new JsonResponse([
+            'code' => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
+            'message' => $this->debug ? $exception->getMessage() : self::INTERNAL_SERVER_ERROR,
+        ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
