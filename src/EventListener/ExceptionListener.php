@@ -2,7 +2,7 @@
 
 namespace Ecosystem\ApiHelpersBundle\EventListener;
 
-use Ecosystem\ApiHelpersBundle\Exception\InvalidDataException;
+use Ecosystem\ApiHelpersBundle\Exception\ValidationException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -27,7 +27,7 @@ final class ExceptionListener
 
     private function getResponseFromException(\Throwable $exception): JsonResponse
     {
-        if ($exception instanceof InvalidDataException) {
+        if ($exception instanceof ValidationException) {
             return new JsonResponse([
                 'code' => $exception->getCode(),
                 'message' => $exception->getMessage(),
