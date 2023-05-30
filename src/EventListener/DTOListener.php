@@ -16,7 +16,7 @@ class DTOListener
     {
     }
 
-    public function onControllerArguments(ControllerArgumentsEvent $event): void
+    public function onKernelControllerArguments(ControllerArgumentsEvent $event): void
     {
         $controller = $event->getController();
         $reflectedMethod = $this->getReflectedMethod($controller);
