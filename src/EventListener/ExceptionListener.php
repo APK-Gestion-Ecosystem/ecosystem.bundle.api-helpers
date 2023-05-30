@@ -31,7 +31,7 @@ final class ExceptionListener
             return new JsonResponse([
                 'code' => $exception->getCode(),
                 'message' => $exception->getMessage(),
-                'errors' => $exception->getErrors()
+                'violations' => $exception->getErrors()
             ], $exception->getCode());
         }
 
