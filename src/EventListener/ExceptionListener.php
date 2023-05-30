@@ -9,7 +9,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
-#[AsEventListener(event: KernelEvents::EXCEPTION, method: 'onKernelException')]
 final class ExceptionListener
 {
     private const INTERNAL_SERVER_ERROR = 'Internal Server Error.';

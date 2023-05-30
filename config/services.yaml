@@ -9,5 +9,15 @@ services:
     Ecosystem\ApiHelpersBundle\Controller\HealthCheckController:
         arguments: ['%env(string:BUILD)%']
 
+    Ecosystem\ApiHelpersBundle\EventListener\ExceptionListener:
+        arguments:
+            $debug: '%kernel.debug%'
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception }
+
+    Ecosystem\ApiHelpersBundle\EventListener\DTOListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.controller_arguments }
+
     Ecosystem\ApiHelpersBundle\Monolog\Processor:
         arguments: ['%env(string:BUILD)%']

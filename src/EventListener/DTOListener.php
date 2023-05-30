@@ -1,7 +1,8 @@
 <?php
 
-namespace Ecosystem\ApiHelpersBundle\DTO;
+namespace Ecosystem\ApiHelpersBundle\EventListener;
 
+use Ecosystem\ApiHelpersBundle\DTO\DTO;
 use Ecosystem\ApiHelpersBundle\Exception\ValidationException;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ControllerArgumentsEvent;
@@ -9,7 +10,6 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-#[AsEventListener(event: KernelEvents::CONTROLLER_ARGUMENTS, method: 'onControllerArguments')]
 class DTOListener
 {
     public function __construct(private ValidatorInterface $validator, private SerializerInterface $serializer)
