@@ -33,9 +33,9 @@ class DTOListener
         if (empty($content)) {
             return;
         }
-
+        $validationGroups = $this->getValidationGroups($reflectedMethod->getAttributes());
         $dto = $this->serializer->deserialize($content, $dtoClass, 'json');
-        $validationErrors = $this->validator->validate($dto);
+        $validationErrors = $this->validator->validate($dto, groups: $validationGroups);
         if (count($validationErrors) > 0) {
             throw new ValidationException($validationErrors);
         }
@@ -72,6 +72,20 @@ class DTOListener
         foreach ($attributes as $attribute) {
             if ($attribute->getName() === DTO::class && isset($attribute->getArguments()['class'])) {
                 return $attribute->getArguments()['class'];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param \ReflectionAttribute[] $attributes
+     * @return array|null
+     */
+    private function getValidationGroups(array $attributes): ?array
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute->getName() === DTO::class && isset($attribute->getArguments()['validationGroups'])) {
+                return $attribute->getArguments()['validationGroups'];
             }
         }
         return null;
