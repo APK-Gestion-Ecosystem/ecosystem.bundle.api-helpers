@@ -32,7 +32,7 @@ class DTOListener
 
         $content = $event->getRequest()->getContent();
         if (empty($content)) {
-            return;
+            throw new \RuntimeException('Request content is empty');
         }
 
         $dto = $this->serializer->deserialize($content, $dtoClass, 'json');
