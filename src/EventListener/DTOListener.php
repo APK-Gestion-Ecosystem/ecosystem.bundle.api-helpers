@@ -3,6 +3,7 @@
 namespace Ecosystem\ApiHelpersBundle\EventListener;
 
 use Ecosystem\ApiHelpersBundle\DTO\DTO;
+use Ecosystem\ApiHelpersBundle\DTO\HasDynamicValidationGroupsInterface;
 use Ecosystem\ApiHelpersBundle\Exception\ValidationException;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ControllerArgumentsEvent;
@@ -33,8 +34,14 @@ class DTOListener
         if (empty($content)) {
             return;
         }
-        $validationGroups = $this->getValidationGroups($reflectedMethod->getAttributes());
+
         $dto = $this->serializer->deserialize($content, $dtoClass, 'json');
+
+        $validationGroups = $this->getValidationGroups($reflectedMethod->getAttributes());
+        if ($dto instanceof HasDynamicValidationGroupsInterface) {
+            $validationGroups = array_merge($validationGroups, $dto->getDynamicValidationGroups());
+        }
+
         $validationErrors = $this->validator->validate($dto, groups: $validationGroups);
         if (count($validationErrors) > 0) {
             throw new ValidationException($validationErrors);
@@ -79,29 +86,28 @@ class DTOListener
 
     /**
      * @param \ReflectionAttribute[] $attributes
-     * @return array|null
+     * @return string[]
      */
-    private function getValidationGroups(array $attributes): ?array
+    private function getValidationGroups(array $attributes): array
     {
+        $groups = ['Default'];
         foreach ($attributes as $attribute) {
             if ($attribute->getName() === DTO::class && isset($attribute->getArguments()['validationGroups'])) {
-                return $attribute->getArguments()['validationGroups'];
+                $groups = array_merge($groups, $attribute->getArguments()['validationGroups']);
+                break;
             }
         }
-        return null;
+        return $groups;
     }
 
     private function getNewArguments(array $arguments, object $dto): array
     {
-        $newArguments = [];
         $dtoClass = get_class($dto);
-        foreach ($arguments as $argument) {
-            if (!$argument instanceof $dtoClass) {
-                $newArguments[] = $argument;
+        foreach ($arguments as $key => $argument) {
+            if ($argument instanceof $dtoClass) {
+                $arguments[$key] = $dto;
             }
         }
-
-        $newArguments[] = $dto;
-        return $newArguments;
+        return $arguments;
     }
 }
