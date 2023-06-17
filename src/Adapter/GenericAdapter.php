@@ -52,6 +52,10 @@ class GenericAdapter
         /** @var class-string $class */
         $class = (string) $adapterMapClassAttribute->getArguments()['class'];
         $identificatorField = (string) $adapterMapClassAttribute->getArguments()['identificatorField'];
+        $strategy = isset($adapterMapClassAttribute->getArguments()['strategy'])
+            ?  (string) $adapterMapClassAttribute->getArguments()['strategy']
+            : AdapterMapEntity::DEFAULT_STRATEGY;
+
         $identificatorValue = $this->propertyAccessor->getValue(
             $mapObject,
             $identificatorField
@@ -60,7 +64,13 @@ class GenericAdapter
             $identificatorField => $identificatorValue
         ]);
         if ($entity === null) {
-            throw new NotFoundHttpException(sprintf('%s not found with identificator %s', ucfirst($propertyName), $identificatorValue));
+            if ($strategy === AdapterMapEntity::STRICT_STRATEGY) {
+                throw new NotFoundHttpException(sprintf('%s not found with identificator %s', ucfirst($propertyName), $identificatorValue));
+            }
+            if ($strategy === AdapterMapEntity::PERSIST_STRATEGY) {
+                $entity = new $class();
+                $this->map($mapObject, $entity);
+            }
         }
         return $entity;
     }
