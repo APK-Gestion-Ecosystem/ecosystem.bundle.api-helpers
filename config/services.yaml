@@ -7,7 +7,8 @@ services:
         autoconfigure: true
 
     Ecosystem\ApiHelpersBundle\Controller\HealthCheckController:
-        arguments: ['%env(string:BUILD)%']
+        arguments:
+            $build: '%env(string:BUILD)%'
 
     Ecosystem\ApiHelpersBundle\EventListener\ExceptionListener:
         arguments:
@@ -20,4 +21,10 @@ services:
             - { name: kernel.event_listener, event: kernel.controller_arguments }
 
     Ecosystem\ApiHelpersBundle\Monolog\Processor:
-        arguments: ['%env(string:BUILD)%']
+        arguments:
+            $build: '%env(string:BUILD)%'
+
+    Ecosystem\ApiHelpersBundle\Adapter\GenericAdapter:
+        arguments:
+            $entityManager: "@doctrine.orm.entity_manager"
+            $propertyAccessor: "@property_accessor"
