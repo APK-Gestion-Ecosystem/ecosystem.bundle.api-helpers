@@ -28,7 +28,7 @@ services:
 
     Ecosystem\ApiHelpersBundle\EventListener\ContextListener:
         tags:
-            - { name: kernel.event_listener, event: kernel.request }
+            - { name: kernel.event_listener, event: kernel.request, priority: 20 }
 
     # Others
     Ecosystem\ApiHelpersBundle\Monolog\Processor:
