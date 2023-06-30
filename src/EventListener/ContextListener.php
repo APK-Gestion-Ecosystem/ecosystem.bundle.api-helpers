@@ -19,6 +19,7 @@ class ContextListener
     {
         $request = $event->getRequest();
         $locale = $request->getLocale();
+
         if (
             $request->headers->has(self::LOCALE_HEADER)
             && in_array($request->headers->get(self::LOCALE_HEADER), self::ALLOWED_LOCALES, true)
