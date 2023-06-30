@@ -6,10 +6,16 @@ services:
         autowire: true
         autoconfigure: true
 
+    # Services
+    Ecosystem\ApiHelpersBundle\Service\:
+        resource: '../src/Service'
+
+    # Controllers
     Ecosystem\ApiHelpersBundle\Controller\HealthCheckController:
         arguments:
             $build: '%env(string:BUILD)%'
 
+    # Listeners
     Ecosystem\ApiHelpersBundle\EventListener\ExceptionListener:
         arguments:
             $debug: '%kernel.debug%'
@@ -20,6 +26,11 @@ services:
         tags:
             - { name: kernel.event_listener, event: kernel.controller_arguments }
 
+    Ecosystem\ApiHelpersBundle\EventListener\ContextListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.request }
+
+    # Others
     Ecosystem\ApiHelpersBundle\Monolog\Processor:
         arguments:
             $build: '%env(string:BUILD)%'
