@@ -31,10 +31,7 @@ class GenericAdapter
                 $adapterMapEntityAttribute = $this->getAdapterMapEntityAttribute($source::class, $propertyName);
                 if ($adapterMapEntityAttribute !== null) {
                     $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
-                    if ($mapObject === null) {
-                        continue;
-                    }
-                    $value = $this->mapEntityValue($adapterMapEntityAttribute, $mapObject, $propertyName);
+                    $value = $mapObject !== null ? $this->mapEntityValue($adapterMapEntityAttribute, $mapObject, $propertyName) : null;
                 }
 
                 // set value
