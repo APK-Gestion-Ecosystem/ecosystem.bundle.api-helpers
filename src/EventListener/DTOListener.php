@@ -35,7 +35,8 @@ class DTOListener
             throw new \RuntimeException('Request content is empty');
         }
 
-        $dto = $this->serializer->deserialize($content, $dtoClass, 'json');
+        $deserializationFormat = $this->getDeserializationFormat($reflectedMethod->getAttributes());
+        $dto = $this->serializer->deserialize($content, $dtoClass, $deserializationFormat);
 
         $validationGroups = $this->getValidationGroups($reflectedMethod->getAttributes());
         if ($dto instanceof HasDynamicValidationGroupsInterface) {
@@ -82,6 +83,16 @@ class DTOListener
             }
         }
         return null;
+    }
+
+    private function getDeserializationFormat(array $attributes): string
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute->getName() === DTO::class && isset($attribute->getArguments()['deserializationFormat'])) {
+                return $attribute->getArguments()['deserializationFormat'];
+            }
+        }
+        return DTO::DEFAULT_DESERIALIZATION_FORMAT;
     }
 
     /**
