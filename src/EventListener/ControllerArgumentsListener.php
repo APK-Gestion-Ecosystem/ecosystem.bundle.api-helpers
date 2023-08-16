@@ -5,13 +5,17 @@ namespace Ecosystem\ApiHelpersBundle\EventListener;
 use Ecosystem\ApiHelpersBundle\DTO\DTO;
 use Ecosystem\ApiHelpersBundle\DTO\HasDynamicValidationGroupsInterface;
 use Ecosystem\ApiHelpersBundle\Exception\ValidationException;
+use Ecosystem\ApiHelpersBundle\Pagination\PaginatedController;
+use Ecosystem\ApiHelpersBundle\Pagination\PaginationData;
+use Ecosystem\ApiHelpersBundle\Pagination\PaginationDataFactory;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ControllerArgumentsEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-class DTOListener
+class ControllerArgumentsListener
 {
     public function __construct(private ValidatorInterface $validator, private SerializerInterface $serializer)
     {
@@ -25,20 +29,26 @@ class DTOListener
             return;
         }
 
+        $arguments = $event->getArguments();
         $dtoClass = $this->getDtoClass($reflectedMethod->getAttributes());
-        if ($dtoClass === null) {
-            return;
+        if ($dtoClass !== null) {
+            $arguments = $this->getDtoArguments($dtoClass, $event->getRequest()->getContent(), $reflectedMethod->getAttributes(), $event->getArguments());
         }
 
-        $content = $event->getRequest()->getContent();
-        if (empty($content)) {
+        $arguments = $this->addPaginationData($event->getRequest(), $arguments);
+        $event->setArguments($arguments);
+    }
+
+    private function getDtoArguments(string $dtoClass, string $requestContent, array $attributes, array $currentArguments): array
+    {
+        if (empty($requestContent)) {
             throw new \RuntimeException('Request content is empty');
         }
 
-        $deserializationFormat = $this->getDeserializationFormat($reflectedMethod->getAttributes());
-        $dto = $this->serializer->deserialize($content, $dtoClass, $deserializationFormat);
+        $deserializationFormat = $this->getDeserializationFormat($attributes);
+        $dto = $this->serializer->deserialize($requestContent, $dtoClass, $deserializationFormat);
 
-        $validationGroups = $this->getValidationGroups($reflectedMethod->getAttributes());
+        $validationGroups = $this->getValidationGroups($attributes);
         if ($dto instanceof HasDynamicValidationGroupsInterface) {
             $validationGroups = array_merge($validationGroups, $dto->getDynamicValidationGroups());
         }
@@ -47,8 +57,8 @@ class DTOListener
         if (count($validationErrors) > 0) {
             throw new ValidationException($validationErrors);
         }
-        $newArguments = $this->getNewArguments($event->getArguments(), $dto);
-        $event->setArguments($newArguments);
+
+        return $this->getNewDtoArguments($currentArguments, $dto);
     }
 
     private function getReflectedMethod(callable $callable): ?\ReflectionMethod
@@ -85,6 +95,16 @@ class DTOListener
         return null;
     }
 
+    private function addPaginationData(Request $request, array $arguments): array
+    {
+        foreach ($arguments as $key => $argument) {
+            if (is_object($argument) && get_class($argument) === PaginationData::class) {
+                $arguments[$key] = PaginationDataFactory::createFromRequest($request);
+            }
+        }
+        return $arguments;
+    }
+
     private function getDeserializationFormat(array $attributes): string
     {
         foreach ($attributes as $attribute) {
@@ -111,7 +131,7 @@ class DTOListener
         return $groups;
     }
 
-    private function getNewArguments(array $arguments, object $dto): array
+    private function getNewDtoArguments(array $arguments, object $dto): array
     {
         $dtoClass = get_class($dto);
         foreach ($arguments as $key => $argument) {

@@ -22,7 +22,7 @@ services:
         tags:
             - { name: kernel.event_listener, event: kernel.exception }
 
-    Ecosystem\ApiHelpersBundle\EventListener\DTOListener:
+    Ecosystem\ApiHelpersBundle\EventListener\ControllerArgumentsListener:
         tags:
             - { name: kernel.event_listener, event: kernel.controller_arguments }
 
@@ -39,3 +39,6 @@ services:
         arguments:
             $entityManager: "@doctrine.orm.entity_manager"
             $propertyAccessor: "@property_accessor"
+
+    Ecosystem\ApiHelpersBundle\Pagination\:
+        resource: '../src/Pagination'

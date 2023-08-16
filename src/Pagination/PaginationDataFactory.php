@@ -23,7 +23,7 @@ class PaginationDataFactory
         $limit = match ($limitQueryParam) {
             -1 => null,
             0 => PaginationData::DEFAULT_LIMIT,
-            default => $pageQueryParam
+            default => $limitQueryParam
         };
         $paginationData->setLimit($limit);
 
