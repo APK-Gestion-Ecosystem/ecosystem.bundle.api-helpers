@@ -2,6 +2,7 @@
 
 namespace Ecosystem\ApiHelpersBundle\Adapter;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
@@ -34,6 +35,13 @@ class GenericAdapter
                     $value = $mapObject !== null ? $this->mapEntityValue($adapterMapEntityAttribute, $mapObject, $propertyName) : null;
                 }
 
+                // check if collection mapping is needed
+                $adapterMapCollectionAttribute = $this->getAdapterMapCollectionAttribute($source::class, $propertyName);
+                if ($adapterMapCollectionAttribute !== null) {
+                    $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
+                    $value = $mapObject !== null ? $this->mapCollectionValue($adapterMapCollectionAttribute, $mapObject, $propertyName) : null;
+                }
+
                 // set value
                 $this->propertyAccessor->setValue($target, $propertyName, $value);
             }
@@ -44,6 +52,13 @@ class GenericAdapter
     {
         $propertyReflection = new \ReflectionProperty($sourceClass, $propertyName);
         $mapAttributes = $propertyReflection->getAttributes(AdapterMapEntity::class);
+        return !empty($mapAttributes) ? $mapAttributes[0] : null;
+    }
+
+    private function getAdapterMapCollectionAttribute(string $sourceClass, string $propertyName): ?\ReflectionAttribute
+    {
+        $propertyReflection = new \ReflectionProperty($sourceClass, $propertyName);
+        $mapAttributes = $propertyReflection->getAttributes(AdapterMapCollection::class);
         return !empty($mapAttributes) ? $mapAttributes[0] : null;
     }
 
@@ -73,5 +88,22 @@ class GenericAdapter
             }
         }
         return $entity;
+    }
+
+    private function mapCollectionValue(\ReflectionAttribute $adapterMapClassAttribute, array $mapObject, string $propertyName): ArrayCollection
+    {
+        $class = (string) $adapterMapClassAttribute->getArguments()['class'];
+        $identificatorField = (string) $adapterMapClassAttribute->getArguments()['identificatorField'];
+
+        $repository = $this->entityManager->getRepository($class);
+
+        $objects = [];
+        foreach ($mapObject as $identificatorValue) {
+            $entity = $repository->findOneBy([$identificatorField => $identificatorValue]);
+            if ($entity !== null) {
+                $objects[] = $entity;
+            }
+        }
+        return new ArrayCollection($objects);
     }
 }
