@@ -13,7 +13,7 @@ class ValidationException extends \Exception
         string $message = 'Invalid data',
         int $code = Response::HTTP_UNPROCESSABLE_ENTITY
     ) {
-        parent::__construct($message, $code);
+        parent::__construct(sprintf('%s - %s', $message, json_encode($this->getErrors())), $code);
     }
 
     public function getErrors(): array
