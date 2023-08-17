@@ -11,7 +11,7 @@ trait GetPaginatedResponseDataTrait
             'total' => $total,
             'limit' => $limit,
             'page' => $page ?? 1,
-            'pages' => $limit !== null ? ceil($total / $limit) : 1,
+            'pages' => $limit !== null ? (int) ceil($total / $limit) : 1,
         ];
     }
 }
