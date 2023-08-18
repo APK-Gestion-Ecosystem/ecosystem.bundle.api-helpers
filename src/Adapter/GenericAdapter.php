@@ -4,6 +4,7 @@ namespace Ecosystem\ApiHelpersBundle\Adapter;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\Proxy;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
@@ -24,47 +25,33 @@ class GenericAdapter
             throw new \RuntimeException('Error when mapping objects');
         }
 
-        foreach ($sourceProperties as $propertyName) {
-            if ($this->propertyAccessor->isWritable($target, $propertyName) && $this->propertyAccessor->isReadable($source, $propertyName)) {
-                $value = $this->propertyAccessor->getValue($source, $propertyName);
-
-                // check if entity mapping is needed
-                $adapterMapEntityAttribute = $this->getAdapterMapEntityAttribute($source::class, $propertyName);
-                if ($adapterMapEntityAttribute !== null) {
-                    $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
-                    $value = $mapObject !== null ? $this->mapEntityValue($adapterMapEntityAttribute, $mapObject, $propertyName) : null;
-                }
-
-                // check if collection mapping is needed
-                $adapterMapCollectionAttribute = $this->getAdapterMapCollectionAttribute($source::class, $propertyName);
-                if ($adapterMapCollectionAttribute !== null) {
-                    $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
-                    $value = $mapObject !== null ? $this->mapCollectionValue($adapterMapCollectionAttribute, $mapObject, $propertyName) : null;
-                }
-
-                // set value
-                $this->propertyAccessor->setValue($target, $propertyName, $value);
-            }
-        }
-    }
-
-    public function mapToDTO(object $source, object $target): void
-    {
-        $reflectionExtractor = new ReflectionExtractor();
-        $sourceProperties = $reflectionExtractor->getProperties($source::class);
-        if (!is_array($sourceProperties)) {
-            throw new \RuntimeException('Error when mapping objects');
-        }
+        $mapToEntity = $this->isEntity($target);
 
         foreach ($sourceProperties as $propertyName) {
             if ($this->propertyAccessor->isWritable($target, $propertyName) && $this->propertyAccessor->isReadable($source, $propertyName)) {
                 $value = $this->propertyAccessor->getValue($source, $propertyName);
 
-                // check if dto mapping is needed
-                $adapterMapDTOAttribute = $this->getAdapterMapDTOAttribute($target::class, $propertyName);
-                if ($adapterMapDTOAttribute !== null) {
-                    $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
-                    $value = $mapObject !== null ? $this->mapDTOValue($adapterMapDTOAttribute, $mapObject): null;
+                if ($mapToEntity) {
+                    // check if entity mapping is needed
+                    $adapterMapEntityAttribute = $this->getAdapterMapEntityAttribute($source::class, $propertyName);
+                    if ($adapterMapEntityAttribute !== null) {
+                        $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
+                        $value = $mapObject !== null ? $this->mapEntityValue($adapterMapEntityAttribute, $mapObject, $propertyName) : null;
+                    }
+
+                    // check if collection mapping is needed
+                    $adapterMapCollectionAttribute = $this->getAdapterMapCollectionAttribute($source::class, $propertyName);
+                    if ($adapterMapCollectionAttribute !== null) {
+                        $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
+                        $value = $mapObject !== null ? $this->mapCollectionValue($adapterMapCollectionAttribute, $mapObject, $propertyName) : null;
+                    }
+                } else {
+                    // check if dto mapping is needed
+                    $adapterMapDTOAttribute = $this->getAdapterMapDTOAttribute($target::class, $propertyName);
+                    if ($adapterMapDTOAttribute !== null) {
+                        $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
+                        $value = $mapObject !== null ? $this->mapDTOValue($adapterMapDTOAttribute, $mapObject): null;
+                    }
                 }
 
                 // set value
@@ -143,7 +130,18 @@ class GenericAdapter
     {
         $class = $adapterMapDTOAttribute->getArguments()['class'];
         $dto = new $class();
-        $this->mapToDTO($mapObject, $dto);
+        $this->map($mapObject, $dto);
         return $dto;
+    }
+
+    private function isEntity(object $class): bool
+    {
+        if (is_object($class)) {
+            $class = ($class instanceof Proxy)
+                ? get_parent_class($class)
+                : get_class($class);
+        }
+
+        return ! $this->entityManager->getMetadataFactory()->isTransient($class);
     }
 }
