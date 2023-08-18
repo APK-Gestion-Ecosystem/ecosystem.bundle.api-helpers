@@ -130,18 +130,16 @@ class GenericAdapter
     {
         $class = $adapterMapDTOAttribute->getArguments()['class'];
         $dto = new $class();
+
+
         $this->map($mapObject, $dto);
         return $dto;
     }
 
     private function isEntity(object $class): bool
     {
-        if (is_object($class)) {
-            $class = ($class instanceof Proxy)
-                ? get_parent_class($class)
-                : get_class($class);
-        }
+        $class = ($class instanceof Proxy) ? get_parent_class($class) : get_class($class);
 
-        return ! $this->entityManager->getMetadataFactory()->isTransient($class);
+        return !$this->entityManager->getMetadataFactory()->isTransient($class);
     }
 }
