@@ -48,6 +48,31 @@ class GenericAdapter
         }
     }
 
+    public function mapToDTO(object $source, object $target): void
+    {
+        $reflectionExtractor = new ReflectionExtractor();
+        $sourceProperties = $reflectionExtractor->getProperties($source::class);
+        if (!is_array($sourceProperties)) {
+            throw new \RuntimeException('Error when mapping objects');
+        }
+
+        foreach ($sourceProperties as $propertyName) {
+            if ($this->propertyAccessor->isWritable($target, $propertyName) && $this->propertyAccessor->isReadable($source, $propertyName)) {
+                $value = $this->propertyAccessor->getValue($source, $propertyName);
+
+                // check if dto mapping is needed
+                $adapterMapDTOAttribute = $this->getAdapterMapDTOAttribute($target::class, $propertyName);
+                if ($adapterMapDTOAttribute !== null) {
+                    $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
+                    $value = $mapObject !== null ? $this->mapDTOValue($adapterMapDTOAttribute, $mapObject): null;
+                }
+
+                // set value
+                $this->propertyAccessor->setValue($target, $propertyName, $value);
+            }
+        }
+    }
+
     private function getAdapterMapEntityAttribute(string $sourceClass, string $propertyName): ?\ReflectionAttribute
     {
         $propertyReflection = new \ReflectionProperty($sourceClass, $propertyName);
@@ -59,6 +84,13 @@ class GenericAdapter
     {
         $propertyReflection = new \ReflectionProperty($sourceClass, $propertyName);
         $mapAttributes = $propertyReflection->getAttributes(AdapterMapCollection::class);
+        return !empty($mapAttributes) ? $mapAttributes[0] : null;
+    }
+
+    private function getAdapterMapDTOAttribute(string $targetClass, $propertyName): ?\ReflectionAttribute
+    {
+        $propertyReflection = new \ReflectionProperty($targetClass, $propertyName);
+        $mapAttributes = $propertyReflection->getAttributes(AdapterMapDTO::class);
         return !empty($mapAttributes) ? $mapAttributes[0] : null;
     }
 
@@ -105,5 +137,13 @@ class GenericAdapter
             }
         }
         return new ArrayCollection($objects);
+    }
+
+    private function mapDTOValue(\ReflectionAttribute $adapterMapDTOAttribute, object $mapObject): ?object
+    {
+        $class = $adapterMapDTOAttribute->getArguments()['class'];
+        $dto = new $class();
+        $this->mapToDTO($mapObject, $dto);
+        return $dto;
     }
 }
