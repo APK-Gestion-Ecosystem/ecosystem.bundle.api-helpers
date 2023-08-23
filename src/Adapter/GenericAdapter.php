@@ -7,6 +7,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
+use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
+use Symfony\Component\Uid\Uuid;
 
 class GenericAdapter
 {
@@ -39,7 +41,7 @@ class GenericAdapter
                 $adapterMapCollectionAttribute = $this->getAdapterMapCollectionAttribute($source::class, $propertyName);
                 if ($adapterMapCollectionAttribute !== null) {
                     $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
-                    $value = $mapObject !== null ? $this->mapCollectionValue($adapterMapCollectionAttribute, $mapObject, $propertyName) : null;
+                    $value = $mapObject !== null ? $this->mapCollectionValue($adapterMapCollectionAttribute, $mapObject, $propertyName, $target) : null;
                 }
 
                 // set value
@@ -90,20 +92,61 @@ class GenericAdapter
         return $entity;
     }
 
-    private function mapCollectionValue(\ReflectionAttribute $adapterMapClassAttribute, array $mapObject, string $propertyName): ArrayCollection
-    {
+    private function mapCollectionValue(
+        \ReflectionAttribute $adapterMapClassAttribute,
+        array $mapObject,
+        string $propertyName,
+        object $target
+    ): ArrayCollection {
         $class = (string) $adapterMapClassAttribute->getArguments()['class'];
         $identificatorField = (string) $adapterMapClassAttribute->getArguments()['identificatorField'];
+        $strategy = isset($adapterMapClassAttribute->getArguments()['strategy'])
+            ?  (string) $adapterMapClassAttribute->getArguments()['strategy']
+            : AdapterMapCollection::DEFAULT_STRATEGY;
 
         $repository = $this->entityManager->getRepository($class);
 
         $objects = [];
-        foreach ($mapObject as $identificatorValue) {
-            $entity = $repository->findOneBy([$identificatorField => $identificatorValue]);
-            if ($entity !== null) {
-                $objects[] = $entity;
+        foreach ($mapObject as $item) {
+            if ($strategy === AdapterMapCollection::UUIDS_ARRAY_STRATEGY) {
+                $entity = $repository->findOneBy([$identificatorField => $item]);
+                if ($entity !== null) {
+                    $objects[] = $entity;
+                }
+                continue;
+            }
+
+            if ($strategy === AdapterMapCollection::ENTITIES_COLLECTION_STRATEGY) {
+                $identificatorValue = $this->propertyAccessor->getValue($item, $identificatorField);
+                if ($identificatorValue !== null) {
+                    $value = $repository->findOneBy([$identificatorField => $identificatorValue]);
+                    if ($value === null) {
+                        throw new NotFoundHttpException(sprintf('%s not found with identificator %s', ucfirst($propertyName), $identificatorValue));
+                    }
+                    $this->map($item, $value);
+                } else {
+                    $value = new $class();
+                    $this->map($item, $value);
+                    $this->propertyAccessor->setValue(
+                        $value,
+                        $identificatorField,
+                        $this->getDefaultIdentificatorFieldValue($identificatorField)
+                    );
+                }
+                if ($value !== null) {
+                    $objects[] = $value;
+                }
+                continue;
             }
         }
         return new ArrayCollection($objects);
+    }
+
+    private function getDefaultIdentificatorFieldValue(string $identificatorField): string
+    {
+        return match ($identificatorField) {
+            'uuid' => Uuid::v7()->toRfc4122(),
+            default => null
+        };
     }
 }
