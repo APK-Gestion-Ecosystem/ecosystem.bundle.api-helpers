@@ -31,10 +31,22 @@ class PaginationDataFactory
 
         $filters = [];
         if ($request->query->count() > 0) {
-            $filters = $request->query->all();
+            foreach ($request->query->all() as $key => $value) {
+                $filters[$key] = self::parseBooleanString($value);
+            }
         }
         $paginationData->setFilters($filters);
 
         return $paginationData;
+    }
+
+    private static function parseBooleanString(string $value): mixed
+    {
+        if ($value === 'true')
+            return true;
+        elseif ($value === 'false')
+            return false;
+        else
+            return $value;
     }
 }
