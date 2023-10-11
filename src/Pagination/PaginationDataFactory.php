@@ -18,6 +18,7 @@ class PaginationDataFactory
             default => $pageQueryParam
         };
         $paginationData->setPage($page);
+        $request->query->remove('page');
 
         $limitQueryParam = (int) $request->query->get('limit');
         $limit = match ($limitQueryParam) {
@@ -26,14 +27,26 @@ class PaginationDataFactory
             default => $limitQueryParam
         };
         $paginationData->setLimit($limit);
+        $request->query->remove('limit');
 
         $filters = [];
-        $queryString = $request->getQueryString();
-        if ($queryString !== null) {
-            $filters = HeaderUtils::parseQuery($queryString);
+        if ($request->query->count() > 0) {
+            foreach ($request->query->all() as $key => $value) {
+                $filters[$key] = self::parseBooleanString($value);
+            }
         }
         $paginationData->setFilters($filters);
 
         return $paginationData;
+    }
+
+    private static function parseBooleanString(string $value): mixed
+    {
+        if ($value === 'true')
+            return true;
+        elseif ($value === 'false')
+            return false;
+        else
+            return $value;
     }
 }
