@@ -40,6 +40,7 @@ final class Processor
             $record->extra['http'] = [
                 'url' => $request->getUri(),
                 'method' => $request->getMethod(),
+                'body' =>$request->getBody(),
                 'user-agent' => $request->headers->get('user-agent'),
                 'ip' => $request->getClientIp(),
                 'aws-trace-id' => $request->headers->get('X-Amzn-Trace-Id'),

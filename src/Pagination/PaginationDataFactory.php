@@ -32,7 +32,7 @@ class PaginationDataFactory
         $filters = [];
         if ($request->query->count() > 0) {
             foreach ($request->query->all() as $key => $value) {
-                $filters[$key] = self::parseBooleanString($value);
+                $filters[$key] = self::parseValue($value);
             }
         }
         $paginationData->setFilters($filters);
@@ -40,13 +40,14 @@ class PaginationDataFactory
         return $paginationData;
     }
 
-    private static function parseBooleanString(string $value): mixed
+    private static function parseValue(string $value): string|bool
     {
-        if ($value === 'true')
+        if ($value === 'true') {
             return true;
-        elseif ($value === 'false')
+        }
+        if ($value === 'false') {
             return false;
-        else
-            return $value;
+        }
+        return $value;
     }
 }
