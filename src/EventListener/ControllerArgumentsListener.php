@@ -53,7 +53,7 @@ class ControllerArgumentsListener
             $validationGroups = array_merge($validationGroups, $dto->getDynamicValidationGroups());
         }
 
-        $validationGroupHeader = $request->headers->get('X-Validation-Groups');
+        $validationGroupHeader = $request->headers->get('X-Validation-Group');
         if ($validationGroupHeader !== null) {
             $validationGroups = [$validationGroupHeader];
         }
