@@ -32,25 +32,30 @@ class ControllerArgumentsListener
         $arguments = $event->getArguments();
         $dtoClass = $this->getDtoClass($reflectedMethod->getAttributes());
         if ($dtoClass !== null) {
-            $arguments = $this->getDtoArguments($dtoClass, $event->getRequest()->getContent(), $reflectedMethod->getAttributes(), $event->getArguments());
+            $arguments = $this->getDtoArguments($dtoClass, $event->getRequest(), $reflectedMethod->getAttributes(), $event->getArguments());
         }
 
         $arguments = $this->addPaginationData($event->getRequest(), $arguments);
         $event->setArguments($arguments);
     }
 
-    private function getDtoArguments(string $dtoClass, string $requestContent, array $attributes, array $currentArguments): array
+    private function getDtoArguments(string $dtoClass, Request $request, array $attributes, array $currentArguments): array
     {
-        if (empty($requestContent)) {
+        if (empty($request->getContent())) {
             throw new \RuntimeException('Request content is empty');
         }
 
         $deserializationFormat = $this->getDeserializationFormat($attributes);
-        $dto = $this->serializer->deserialize($requestContent, $dtoClass, $deserializationFormat);
+        $dto = $this->serializer->deserialize($request->getContent(), $dtoClass, $deserializationFormat);
 
         $validationGroups = $this->getValidationGroups($attributes);
         if ($dto instanceof HasDynamicValidationGroupsInterface) {
             $validationGroups = array_merge($validationGroups, $dto->getDynamicValidationGroups());
+        }
+
+        $validationGroupHeader = $request->headers->get('X-Validation-Groups');
+        if ($validationGroupHeader !== null) {
+            $validationGroups = [$validationGroupHeader];
         }
 
         $validationErrors = $this->validator->validate($dto, groups: $validationGroups);
