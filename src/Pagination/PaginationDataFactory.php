@@ -40,13 +40,16 @@ class PaginationDataFactory
         return $paginationData;
     }
 
-    private static function parseValue(string $value): string|bool
+    private static function parseValue(string $value): string|bool|null
     {
         if ($value === 'true') {
             return true;
         }
         if ($value === 'false') {
             return false;
+        }
+        if ($value === 'null') {
+            return null;
         }
         return $value;
     }
