@@ -32,6 +32,9 @@ class PaginationDataFactory
         $filters = [];
         if ($request->query->count() > 0) {
             foreach ($request->query->all() as $key => $value) {
+                if ($value === '') {
+                    continue;
+                }
                 $filters[$key] = self::parseValue($value);
             }
         }
