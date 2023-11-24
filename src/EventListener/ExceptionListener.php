@@ -20,7 +20,6 @@ final class ExceptionListener
     public function onKernelException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
-        $this->logger->error(sprintf('Handling exception: %s', $exception->getMessage()));
 
         $response = $this->getResponseFromException($exception);
         $event->setResponse($response);
@@ -29,6 +28,7 @@ final class ExceptionListener
     private function getResponseFromException(\Throwable $exception): JsonResponse
     {
         if ($exception instanceof ValidationException) {
+            $this->logger->debug(sprintf('Validation exception: %s', $exception->getMessage()));
             return new JsonResponse([
                 'code' => $exception->getCode(),
                 'message' => $exception->getMessage(),
@@ -37,11 +37,14 @@ final class ExceptionListener
         }
 
         if ($exception instanceof HttpExceptionInterface) {
+            $this->logger->error(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
             return new JsonResponse([
                 'code' => $exception->getStatusCode(),
                 'message' => $exception->getMessage(),
             ], $exception->getStatusCode());
         }
+
+        $this->logger->error(sprintf('Handling exception: %s', $exception->getMessage()));
 
         return new JsonResponse([
             'code' => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
