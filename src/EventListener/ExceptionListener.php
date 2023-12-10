@@ -4,10 +4,10 @@ namespace Ecosystem\ApiHelpersBundle\EventListener;
 
 use Ecosystem\ApiHelpersBundle\Exception\ValidationException;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\Serializer\Exception\UnexpectedValueException;
 
 final class ExceptionListener
 {
@@ -42,6 +42,14 @@ final class ExceptionListener
                 'code' => $exception->getStatusCode(),
                 'message' => $exception->getMessage(),
             ], $exception->getStatusCode());
+        }
+
+        if ($exception instanceof UnexpectedValueException) {
+            $this->logger->warning(sprintf('Encoding issues: %s', $exception->getMessage()));
+            return new JsonResponse([
+                'code' => 400,
+                'message' => $exception->getMessage(),
+            ], 400);
         }
 
         $this->logger->error(sprintf('Handling exception: %s', $exception->getMessage()));
