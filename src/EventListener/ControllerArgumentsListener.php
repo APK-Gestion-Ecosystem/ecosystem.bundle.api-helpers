@@ -46,7 +46,14 @@ class ControllerArgumentsListener
         }
 
         $deserializationFormat = $this->getDeserializationFormat($attributes);
-        $dto = $this->serializer->deserialize($request->getContent(), $dtoClass, $deserializationFormat);
+        $context = $this->getDeserializationContext($attributes);
+
+        $requestContent = $request->getContent();
+        if ($deserializationFormat === 'xml') {
+            $requestContent = $this->cleanXmlEmptyTags($requestContent);
+        }
+
+        $dto = $this->serializer->deserialize($requestContent, $dtoClass, $deserializationFormat, $context);
 
         $validationGroups = $this->getValidationGroups($attributes);
         if ($dto instanceof HasDynamicValidationGroupsInterface) {
@@ -120,6 +127,16 @@ class ControllerArgumentsListener
         return DTO::DEFAULT_DESERIALIZATION_FORMAT;
     }
 
+    private function getDeserializationContext(array $attributes): array
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute->getName() === DTO::class && isset($attribute->getArguments()['context'])) {
+                return $attribute->getArguments()['context'];
+            }
+        }
+        return [];
+    }
+
     /**
      * @param \ReflectionAttribute[] $attributes
      * @return string[]
@@ -145,5 +162,21 @@ class ControllerArgumentsListener
             }
         }
         return $arguments;
+    }
+
+    private function cleanXmlEmptyTags(string $requestContent): string
+    {
+        $doc = new \DOMDocument;
+        $doc->preserveWhiteSpace = false;
+        $doc->loadxml($requestContent);
+
+        $xpath = new \DOMXPath($doc);
+
+        foreach($xpath->query('//*[not(normalize-space())]') as $node ) {
+            $node->parentNode->removeChild($node);
+        }
+
+        $doc->formatOutput = true;
+        return $doc->saveXML();
     }
 }
