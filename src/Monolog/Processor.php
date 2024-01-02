@@ -19,6 +19,7 @@ final class Processor
 
     private ?string $requestId = null;
     private ?string $requestSource = null;
+    private ?string $cmd = null;
 
     public function __construct(private string $build)
     {
@@ -31,6 +32,7 @@ final class Processor
             if (php_sapi_name() === 'cli') {
                 $this->requestSource = self::SOURCE_CLI;
                 $this->requestId = strval(getmypid());
+                $this->cmd = implode(' ', $_SERVER['argv']);
             }
         }
 
@@ -53,6 +55,10 @@ final class Processor
             'id' => $this->requestId,
             'source' => $this->requestSource,
         ];
+
+        if ($this->cmd !== null) {
+            $record->extra['request']['cmd'] = $this->cmd;
+        }
 
         $record->extra['build'] = $this->build;
 
