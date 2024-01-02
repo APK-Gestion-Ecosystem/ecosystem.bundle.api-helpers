@@ -10,7 +10,8 @@ class DTO
     public function __construct(
         private string $class,
         private ?array $validationGroups = null,
-        private ?string $deserializationFormat = null
+        private ?string $deserializationFormat = null,
+        private ?array $context = null
     ) {
     }
 
@@ -44,6 +45,18 @@ class DTO
     public function setDeserializationFormat(?string $deserializationFormat): self
     {
         $this->deserializationFormat = $deserializationFormat;
+
+        return $this;
+    }
+
+    public function getContext(): ?array
+    {
+        return $this->context;
+    }
+
+    public function setContext(?array $context): self
+    {
+        $this->context = $context;
 
         return $this;
     }
