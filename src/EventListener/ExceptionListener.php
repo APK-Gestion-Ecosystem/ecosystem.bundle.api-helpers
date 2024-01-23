@@ -37,7 +37,12 @@ final class ExceptionListener
         }
 
         if ($exception instanceof HttpExceptionInterface) {
-            $this->logger->error(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
+            if ($exception->getCode() < 500) {
+                $this->logger->notice(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
+            } else {
+                $this->logger->error(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
+            }
+
             return new JsonResponse([
                 'code' => $exception->getStatusCode(),
                 'message' => $exception->getMessage(),
