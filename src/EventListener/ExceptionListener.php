@@ -38,7 +38,7 @@ final class ExceptionListener
 
         if ($exception instanceof HttpExceptionInterface) {
             if ($exception->getCode() < 500) {
-                $this->logger->notice(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
+                $this->logger->info(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
             } else {
                 $this->logger->error(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
             }
