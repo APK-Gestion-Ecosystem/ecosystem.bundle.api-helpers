@@ -9,7 +9,7 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 class ContextListener
 {
     private const LOCALE_HEADER = 'X-ECOSYS-LOCALE';
-    private const ALLOWED_LOCALES = ['es', 'en'];
+    private const ALLOWED_LOCALES = ['es', 'en', 'ca'];
 
     public function __construct(private readonly ContextService $contextService)
     {
