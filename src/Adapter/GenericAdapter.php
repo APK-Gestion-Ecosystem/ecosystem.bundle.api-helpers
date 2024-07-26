@@ -13,8 +13,8 @@ use Symfony\Component\Uid\Uuid;
 class GenericAdapter
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private PropertyAccessorInterface $propertyAccessor
+        protected EntityManagerInterface $entityManager,
+        protected PropertyAccessorInterface $propertyAccessor
     ) {
     }
 
@@ -50,21 +50,21 @@ class GenericAdapter
         }
     }
 
-    private function getAdapterMapEntityAttribute(string $sourceClass, string $propertyName): ?\ReflectionAttribute
+    protected function getAdapterMapEntityAttribute(string $sourceClass, string $propertyName): ?\ReflectionAttribute
     {
         $propertyReflection = new \ReflectionProperty($sourceClass, $propertyName);
         $mapAttributes = $propertyReflection->getAttributes(AdapterMapEntity::class);
         return !empty($mapAttributes) ? $mapAttributes[0] : null;
     }
 
-    private function getAdapterMapCollectionAttribute(string $sourceClass, string $propertyName): ?\ReflectionAttribute
+    protected function getAdapterMapCollectionAttribute(string $sourceClass, string $propertyName): ?\ReflectionAttribute
     {
         $propertyReflection = new \ReflectionProperty($sourceClass, $propertyName);
         $mapAttributes = $propertyReflection->getAttributes(AdapterMapCollection::class);
         return !empty($mapAttributes) ? $mapAttributes[0] : null;
     }
 
-    private function mapEntityValue(\ReflectionAttribute $adapterMapClassAttribute, object $mapObject, string $propertyName): mixed
+    protected function mapEntityValue(\ReflectionAttribute $adapterMapClassAttribute, object $mapObject, string $propertyName): mixed
     {
         /** @var class-string $class */
         $class = (string) $adapterMapClassAttribute->getArguments()['class'];
@@ -92,7 +92,7 @@ class GenericAdapter
         return $entity;
     }
 
-    private function mapCollectionValue(
+    protected function mapCollectionValue(
         \ReflectionAttribute $adapterMapClassAttribute,
         array $mapObject,
         string $propertyName,
@@ -116,12 +116,21 @@ class GenericAdapter
                 continue;
             }
 
-            if ($strategy === AdapterMapCollection::ENTITIES_COLLECTION_STRATEGY) {
+            if (in_array($strategy, [AdapterMapCollection::ENTITIES_COLLECTION_STRATEGY, AdapterMapCollection::ENTITIES_COLLECTION_PERSIST_STRATEGY])) {
                 $identificatorValue = $this->propertyAccessor->getValue($item, $identificatorField);
                 if ($identificatorValue !== null) {
                     $value = $repository->findOneBy([$identificatorField => $identificatorValue]);
                     if ($value === null) {
-                        throw new NotFoundHttpException(sprintf('%s not found with identificator %s', ucfirst($propertyName), $identificatorValue));
+                        if ($strategy === AdapterMapCollection::ENTITIES_COLLECTION_STRATEGY) {
+                            throw new NotFoundHttpException(sprintf('%s not found with identificator %s', ucfirst($propertyName), $identificatorValue));
+                        } elseif ($strategy === AdapterMapCollection::ENTITIES_COLLECTION_PERSIST_STRATEGY) {
+                            $value = new $class();
+                            $this->propertyAccessor->setValue(
+                                $value,
+                                $identificatorField,
+                                $this->getDefaultIdentificatorFieldValue($identificatorField)
+                            );
+                        }
                     }
                     $this->map($item, $value);
                 } else {
@@ -142,7 +151,7 @@ class GenericAdapter
         return new ArrayCollection($objects);
     }
 
-    private function getDefaultIdentificatorFieldValue(string $identificatorField): string
+    protected function getDefaultIdentificatorFieldValue(string $identificatorField): string
     {
         return match ($identificatorField) {
             'uuid' => Uuid::v7()->toRfc4122(),

@@ -7,6 +7,7 @@ class AdapterMapCollection
 {
     public const UUIDS_ARRAY_STRATEGY = 'uuids_array';
     public const ENTITIES_COLLECTION_STRATEGY = 'entities_collection';
+    public const ENTITIES_COLLECTION_PERSIST_STRATEGY = 'entities_collection_persist';
     public const DEFAULT_STRATEGY = self::ENTITIES_COLLECTION_STRATEGY;
 
     public function __construct(
