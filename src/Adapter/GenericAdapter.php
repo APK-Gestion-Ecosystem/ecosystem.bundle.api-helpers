@@ -117,7 +117,11 @@ class GenericAdapter
             }
 
             if ($strategy === AdapterMapCollection::ENTITIES_COLLECTION_STRATEGY) {
-                $identificatorValue = $this->propertyAccessor->getValue($item, $identificatorField);
+                $identificatorValue = null;
+                if ($this->propertyAccessor->isReadable($item, $identificatorField)) {
+                    $identificatorValue = $this->propertyAccessor->getValue($item, $identificatorField);
+                }
+
                 if ($identificatorValue !== null) {
                     $value = $repository->findOneBy([$identificatorField => $identificatorValue]);
                     if ($value === null) {
