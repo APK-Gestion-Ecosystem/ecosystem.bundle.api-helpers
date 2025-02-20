@@ -28,7 +28,7 @@ final class ExceptionListener
     private function getResponseFromException(\Throwable $exception): JsonResponse
     {
         if ($exception instanceof ValidationException) {
-            $this->logger->debug(sprintf('Validation exception: %s', $exception->getMessage()));
+            $this->logger->debug(sprintf('Validation exception (%s): "%s"', $exception::class, $exception->getMessage()));
             return new JsonResponse([
                 'code' => $exception->getCode(),
                 'message' => $exception->getMessage(),
@@ -38,9 +38,9 @@ final class ExceptionListener
 
         if ($exception instanceof HttpExceptionInterface) {
             if ($exception->getCode() < 500) {
-                $this->logger->info(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
+                $this->logger->info(sprintf('Handling HTTP exception (%s): "%s"', $exception::class, $exception->getMessage()));
             } else {
-                $this->logger->error(sprintf('Handling HTTP exception: %s', $exception->getMessage()));
+                $this->logger->error(sprintf('Handling HTTP exception (%s): "%s"', $exception::class, $exception->getMessage()));
             }
 
             return new JsonResponse([
@@ -50,14 +50,14 @@ final class ExceptionListener
         }
 
         if ($exception instanceof UnexpectedValueException) {
-            $this->logger->warning(sprintf('Encoding issues: %s', $exception->getMessage()));
+            $this->logger->warning(sprintf('Encoding issues (%s): "%s"', $exception::class, $exception->getMessage()));
             return new JsonResponse([
                 'code' => 400,
                 'message' => $exception->getMessage(),
             ], 400);
         }
 
-        $this->logger->error(sprintf('Handling exception: %s', $exception->getMessage()));
+        $this->logger->error(sprintf('Handling exception (%s): "%s"', $exception::class, $exception->getMessage()));
 
         return new JsonResponse([
             'code' => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
