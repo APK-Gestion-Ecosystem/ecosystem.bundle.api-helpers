@@ -88,6 +88,12 @@ class GenericAdapter
                 $entity = new $class();
                 $this->map($mapObject, $entity);
             }
+            if ($strategy === AdapterMapEntity::EARLY_PERSIST_STRATEGY) {
+                $entity = new $class();
+                $this->map($mapObject, $entity);
+                $this->entityManager->persist($entity);
+                $this->entityManager->flush();
+            }
         }
         return $entity;
     }
