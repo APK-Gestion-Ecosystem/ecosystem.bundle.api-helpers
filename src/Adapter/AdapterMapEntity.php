@@ -8,12 +8,14 @@ class AdapterMapEntity
     public const STRICT_STRATEGY = 'strict';
     public const PERSIST_STRATEGY = 'persist';
     public const EARLY_PERSIST_STRATEGY = 'early_persist';
+    public const FIND_OR_PERSIST_STRATEGY = 'find_or_persist';
     public const DEFAULT_STRATEGY = self::STRICT_STRATEGY;
 
     public function __construct(
         private string $class,
         private string $identificatorField = 'uuid',
-        private string $strategy = self::DEFAULT_STRATEGY
+        private string $strategy = self::DEFAULT_STRATEGY,
+        private ?string $fallbackField = null
     ) {
     }
 }

@@ -69,6 +69,7 @@ class GenericAdapter
         /** @var class-string $class */
         $class = (string) $adapterMapClassAttribute->getArguments()['class'];
         $identificatorField = (string) $adapterMapClassAttribute->getArguments()['identificatorField'];
+        $fallbackField = $adapterMapClassAttribute->getArguments()['fallbackField'] ?? null;
         $strategy = isset($adapterMapClassAttribute->getArguments()['strategy'])
             ?  (string) $adapterMapClassAttribute->getArguments()['strategy']
             : AdapterMapEntity::DEFAULT_STRATEGY;
@@ -93,6 +94,28 @@ class GenericAdapter
                 $this->map($mapObject, $entity);
                 $this->entityManager->persist($entity);
                 $this->entityManager->flush();
+            }
+            if ($strategy === AdapterMapEntity::FIND_OR_PERSIST_STRATEGY) {
+                if (
+                    $fallbackField !== null &&
+                    $this->propertyAccessor->isReadable($mapObject, $fallbackField)
+                ) {
+                    $fallbackValue = $this->propertyAccessor->getValue(
+                        $mapObject,
+                        $fallbackField
+                    );
+                    if ($fallbackValue !== null) {
+                        $entity = $this->entityManager
+                            ->getRepository($class)
+                            ->findOneBy([
+                                $fallbackField => $fallbackValue
+                            ]);
+                    }
+                }
+                if ($entity === null) {
+                    $entity = new $class();
+                }
+                $this->map($mapObject, $entity);
             }
         }
         return $entity;
