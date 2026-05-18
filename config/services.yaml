@@ -37,8 +37,24 @@ services:
 
     Ecosystem\ApiHelpersBundle\Adapter\GenericAdapter:
         arguments:
+            $propertyAccessor: "@property_accessor"
+            $handlers: !tagged_iterator ecosystem.api_helpers.adapter_handler
+
+    Ecosystem\ApiHelpersBundle\Adapter\EntityMappingHandler:
+        arguments:
             $entityManager: "@doctrine.orm.entity_manager"
             $propertyAccessor: "@property_accessor"
+
+    Ecosystem\ApiHelpersBundle\Adapter\CollectionMappingHandler:
+        arguments:
+            $entityManager: "@doctrine.orm.entity_manager"
+            $propertyAccessor: "@property_accessor"
+
+    Ecosystem\ApiHelpersBundle\Adapter\CallbackMappingHandler: ~
+
+    _instanceof:
+        Ecosystem\ApiHelpersBundle\Adapter\AdapterHandlerInterface:
+            tags: ['ecosystem.api_helpers.adapter_handler']
 
     Ecosystem\ApiHelpersBundle\Pagination\:
         resource: '../src/Pagination'
