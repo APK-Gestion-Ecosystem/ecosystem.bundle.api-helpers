@@ -58,3 +58,5 @@ services:
 
     Ecosystem\ApiHelpersBundle\Pagination\:
         resource: '../src/Pagination'
+
+    Psr\Container\ContainerInterface: '@service_container'
