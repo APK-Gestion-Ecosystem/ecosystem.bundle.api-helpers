@@ -1,20 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ecosystem\ApiHelpersBundle\Adapter;
 
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
-use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
-use Symfony\Component\Uid\Uuid;
 
 class GenericAdapter
 {
+    /**
+     * @param iterable<AdapterHandlerInterface> $handlers
+     */
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private PropertyAccessorInterface $propertyAccessor
+        private PropertyAccessorInterface $propertyAccessor,
+        private iterable $handlers
     ) {
     }
 
@@ -22,6 +22,7 @@ class GenericAdapter
     {
         $reflectionExtractor = new ReflectionExtractor();
         $sourceProperties = $reflectionExtractor->getProperties($source::class);
+
         if (!is_array($sourceProperties)) {
             throw new \RuntimeException('Error when mapping objects');
         }
@@ -30,133 +31,20 @@ class GenericAdapter
             if ($this->propertyAccessor->isWritable($target, $propertyName) && $this->propertyAccessor->isReadable($source, $propertyName)) {
                 $value = $this->propertyAccessor->getValue($source, $propertyName);
 
-                // check if entity mapping is needed
-                $adapterMapEntityAttribute = $this->getAdapterMapEntityAttribute($source::class, $propertyName);
-                if ($adapterMapEntityAttribute !== null) {
-                    $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
-                    $value = $mapObject !== null ? $this->mapEntityValue($adapterMapEntityAttribute, $mapObject, $propertyName) : null;
+                $propertyReflection = new \ReflectionProperty($source::class, $propertyName);
+                $attributes = $propertyReflection->getAttributes();
+
+                foreach ($attributes as $attribute) {
+                    foreach ($this->handlers as $handler) {
+                        if ($handler->supports($attribute)) {
+                            $value = $handler->handle($attribute, $value, $source, $target, $propertyName, $this);
+                            break;
+                        }
+                    }
                 }
 
-                // check if collection mapping is needed
-                $adapterMapCollectionAttribute = $this->getAdapterMapCollectionAttribute($source::class, $propertyName);
-                if ($adapterMapCollectionAttribute !== null) {
-                    $mapObject = $this->propertyAccessor->getValue($source, $propertyName);
-                    $value = $mapObject !== null ? $this->mapCollectionValue($adapterMapCollectionAttribute, $mapObject, $propertyName, $target) : null;
-                }
-
-                // set value
                 $this->propertyAccessor->setValue($target, $propertyName, $value);
             }
         }
-    }
-
-    private function getAdapterMapEntityAttribute(string $sourceClass, string $propertyName): ?\ReflectionAttribute
-    {
-        $propertyReflection = new \ReflectionProperty($sourceClass, $propertyName);
-        $mapAttributes = $propertyReflection->getAttributes(AdapterMapEntity::class);
-        return !empty($mapAttributes) ? $mapAttributes[0] : null;
-    }
-
-    private function getAdapterMapCollectionAttribute(string $sourceClass, string $propertyName): ?\ReflectionAttribute
-    {
-        $propertyReflection = new \ReflectionProperty($sourceClass, $propertyName);
-        $mapAttributes = $propertyReflection->getAttributes(AdapterMapCollection::class);
-        return !empty($mapAttributes) ? $mapAttributes[0] : null;
-    }
-
-    private function mapEntityValue(\ReflectionAttribute $adapterMapClassAttribute, object $mapObject, string $propertyName): mixed
-    {
-        /** @var class-string $class */
-        $class = (string) $adapterMapClassAttribute->getArguments()['class'];
-        $identificatorField = (string) $adapterMapClassAttribute->getArguments()['identificatorField'];
-        $strategy = isset($adapterMapClassAttribute->getArguments()['strategy'])
-            ?  (string) $adapterMapClassAttribute->getArguments()['strategy']
-            : AdapterMapEntity::DEFAULT_STRATEGY;
-
-        $identificatorValue = $this->propertyAccessor->getValue(
-            $mapObject,
-            $identificatorField
-        );
-        $entity = $this->entityManager->getRepository($class)->findOneBy([
-            $identificatorField => $identificatorValue
-        ]);
-        if ($entity === null) {
-            if ($strategy === AdapterMapEntity::STRICT_STRATEGY) {
-                throw new NotFoundHttpException(sprintf('%s not found with identificator %s', ucfirst($propertyName), $identificatorValue));
-            }
-            if ($strategy === AdapterMapEntity::PERSIST_STRATEGY) {
-                $entity = new $class();
-                $this->map($mapObject, $entity);
-            }
-            if ($strategy === AdapterMapEntity::EARLY_PERSIST_STRATEGY) {
-                $entity = new $class();
-                $this->map($mapObject, $entity);
-                $this->entityManager->persist($entity);
-                $this->entityManager->flush();
-            }
-        }
-        return $entity;
-    }
-
-    private function mapCollectionValue(
-        \ReflectionAttribute $adapterMapClassAttribute,
-        array $mapObject,
-        string $propertyName,
-        object $target
-    ): ArrayCollection {
-        $class = (string) $adapterMapClassAttribute->getArguments()['class'];
-        $identificatorField = (string) $adapterMapClassAttribute->getArguments()['identificatorField'];
-        $strategy = isset($adapterMapClassAttribute->getArguments()['strategy'])
-            ?  (string) $adapterMapClassAttribute->getArguments()['strategy']
-            : AdapterMapCollection::DEFAULT_STRATEGY;
-
-        $repository = $this->entityManager->getRepository($class);
-
-        $objects = [];
-        foreach ($mapObject as $item) {
-            if ($strategy === AdapterMapCollection::UUIDS_ARRAY_STRATEGY) {
-                $entity = $repository->findOneBy([$identificatorField => $item]);
-                if ($entity !== null) {
-                    $objects[] = $entity;
-                }
-                continue;
-            }
-
-            if ($strategy === AdapterMapCollection::ENTITIES_COLLECTION_STRATEGY) {
-                $identificatorValue = null;
-                if ($this->propertyAccessor->isReadable($item, $identificatorField)) {
-                    $identificatorValue = $this->propertyAccessor->getValue($item, $identificatorField);
-                }
-
-                if ($identificatorValue !== null) {
-                    $value = $repository->findOneBy([$identificatorField => $identificatorValue]);
-                    if ($value === null) {
-                        throw new NotFoundHttpException(sprintf('%s not found with identificator %s', ucfirst($propertyName), $identificatorValue));
-                    }
-                    $this->map($item, $value);
-                } else {
-                    $value = new $class();
-                    $this->map($item, $value);
-                    $this->propertyAccessor->setValue(
-                        $value,
-                        $identificatorField,
-                        $this->getDefaultIdentificatorFieldValue($identificatorField)
-                    );
-                }
-                if ($value !== null) {
-                    $objects[] = $value;
-                }
-                continue;
-            }
-        }
-        return new ArrayCollection($objects);
-    }
-
-    private function getDefaultIdentificatorFieldValue(string $identificatorField): string
-    {
-        return match ($identificatorField) {
-            'uuid' => Uuid::v7()->toRfc4122(),
-            default => null
-        };
     }
 }
