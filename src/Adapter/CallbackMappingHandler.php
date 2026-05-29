@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Ecosystem\ApiHelpersBundle\Adapter;
 
+use Psr\Container\ContainerInterface;
 use ReflectionAttribute;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class CallbackMappingHandler implements AdapterHandlerInterface
 {
